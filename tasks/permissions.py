@@ -12,14 +12,14 @@ from rest_framework import permissions
 
 #         return request.user.is_superuser
 
-
-class IsOwnerOrReadOnly(permissions.BasePermission):
+# TODO
+class IsUserAssignedToTask(permissions.BasePermission):
     """
-    Custom permissions to only allow Owners to edit
-    """
+    # Custom permissions to only allow Owners to edit
+    # """
 
-    def has_object_permission(self, request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True
+    # def has_object_permission(self, request, view, obj):
+    #     if request.method in permissions.SAFE_METHODS:
+    #         return True
 
-        return obj.owner == request.user
+    #     return obj.owner == request.user

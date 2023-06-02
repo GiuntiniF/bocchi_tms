@@ -1,10 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
-
-# class TaskStep(models.Model):
-#     name = models.CharField(max_length=50)
-#     completed = models.BooleanField(default=False)
-#     task = models.ForeignKey('Task', on_delete=models.CASCADE)
+from django.contrib.auth.models import User, Group
 
 
 class Task(models.Model):
@@ -18,9 +13,11 @@ class Task(models.Model):
     deadline_date = models.DateTimeField(
         'deadline', null=True, blank=True, default=None)
     owner = models.ForeignKey(
-        'auth.User', related_name='tasks', on_delete=models.CASCADE)
-    groups = models.ManyToManyField('auth.Group', null=True, blank=True)
-    users = models.ManyToManyField('auth.User', null=True, blank=True)
+        'auth.User', related_name='task_created', on_delete=models.CASCADE)
+    groups = models.ManyToManyField(
+        Group, related_name='tasks', null=True, blank=True)
+    users = models.ManyToManyField(
+        User, related_name='tasks', null=True, blank=True)
 
     parent_task = models.ForeignKey(
         'self', null=True, blank=True, on_delete=models.CASCADE)
