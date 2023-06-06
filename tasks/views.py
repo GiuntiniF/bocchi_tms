@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, mixins
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.contrib.auth.models import User, Group
@@ -76,7 +76,7 @@ def remove_user_and_group_from_subtasks(instance, serializer):
 
 class TaskViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that return the task associated with the user (or all the task if the user is a superuser).
+    API endpoint that returns the task associated with the user (or all the task if the user is a superuser).
     """
     serializer_class = TaskSerializer
 
@@ -101,18 +101,27 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='created', url_name='created_tasks')
     def list_created_tasks(self, request):
+        """
+        API endpoint that returns the task created by the user.
+        """
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'], url_path='assigned', url_name='assigned_tasks')
     def list_assigned_tasks(self, request):
+        """
+        API endpoint that returns the task assigned to the user.
+        """
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     def list(self, request, *args, **kwargs):
         if request.user.is_superuser:
+            """
+            API endpoint that returns all the task associated if the user is a superuser, or an API root for the task lists otherwise.
+            """
             # a superuser can see all the taska that are in the system
             queryset = self.get_queryset()
             serializer = self.get_serializer(queryset, many=True)
@@ -193,7 +202,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             old_group_list, old_user_list, old_task_id, old_task_title, serializer)
 
 
-class UserNotificationAssignmentViewSet(viewsets.ModelViewSet):
+class UserNotificationAssignmentViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -202,11 +211,10 @@ class UserNotificationAssignmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # if user.is_superuser:
-        #     queryset = UserNotificationAssignment.objects.all()
-        # else:
-        # queryset = UserNotificationAssignment.objects.all()
-        queryset = UserNotificationAssignment.objects.filter(user=user)
+        if user.is_superuser:
+            queryset = UserNotificationAssignment.objects.all()
+        else:
+            queryset = UserNotificationAssignment.objects.filter(user=user)
         return queryset
 
     # def list(self, request):
@@ -215,7 +223,11 @@ class UserNotificationAssignmentViewSet(viewsets.ModelViewSet):
     #     return Response(serializer.data)
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(mixins.UpdateModelMixin,
+                  mixins.ListModelMixin,
+                  mixins.RetrieveModelMixin,
+                  mixins.DestroyModelMixin,
+                  viewsets.GenericViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -226,7 +238,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class GroupViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows groups to be viewed or edited.
+    API endpoint that allows groups to be viewed or edited(only if you are logged as a superuser).
     """
     queryset = Group.objects.all()
     serializer_class = GroupSerializer

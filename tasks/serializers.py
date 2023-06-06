@@ -45,7 +45,7 @@ class UserNotificationAssignmentSerializer(serializers.HyperlinkedModelSerialize
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'url', 'username',
+        fields = ['id', 'url', 'username', 'first_name', 'last_name', 'is_superuser',
                   'email', 'groups', 'created_tasks', 'notification_list']
 
 

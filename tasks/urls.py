@@ -15,5 +15,3 @@ router.register(r'groups', views.GroupViewSet, basename="group")
 urlpatterns = [
     path('', include(router.urls))
 ]
-
-print(router.get_routes(views.TaskViewSet))
