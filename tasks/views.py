@@ -3,10 +3,11 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.contrib.auth.models import User, Group
 from django.shortcuts import get_object_or_404
-from .models import Task
+from .models import Task, UserNotificationAssignment
+from .notifications import create_task_added_notification, create_group_added_removed_notification, create_user_added_removed_notification, create_task_deleted_notification, create_task_status_updated_notification, create_task_deadline_updated_notification
 from .exceptions import UserNotInGroupException, TaskAssignedToHisSubtaskException
-from .permissions import IsOwnerOrSuperuserOrReadOnly, AssignedUserOrOwnerOsSuperuserCanView
-from .serializers import TaskSerializer, UserSerializer, GroupSerializer
+from .permissions import IsSuperuserOrReadOnly, IsOwnerOrSuperuserOrReadOnly, AssignedUserOrOwnerOsSuperuserCanView
+from .serializers import TaskSerializer, UserSerializer, GroupSerializer, UserNotificationAssignmentSerializer
 
 
 def check_parent_task_as_subtask(instance, serializer):
@@ -36,9 +37,6 @@ def check_assigned_users_in_groups(serializer):
                     is_user_assignable = True
             if is_user_assignable == False:
                 raise UserNotInGroupException(context=user_instance)
-            else:
-                # se l'utente è assegnato al task, gli mando una notifica
-                print('aa')
 
 
 def set_parent_tasks_users(serializer):
@@ -58,7 +56,6 @@ def remove_user_and_group_from_subtasks(instance, serializer):
     request_groups = serializer.validated_data.get('groups')
     request_users = serializer.validated_data.get('users')
     request_status = serializer.validated_data.get('status')
-    # if request_groups is not None and request_users is not None:
     subtask_list = list(instance.subtasks.all())
     while subtask_list is not None and len(subtask_list) > 0:
         subtask = subtask_list.pop()
@@ -72,7 +69,7 @@ def remove_user_and_group_from_subtasks(instance, serializer):
             for group in subtask.groups.all():
                 if group not in request_groups:
                     subtask.groups.remove(group)
-        if subtask.status != 'completed':
+        if subtask.status != 'COMPLETED':
             subtask.status = request_status
         subtask.save()
 
@@ -88,7 +85,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         if user.is_superuser:
             # superusers can see all tasks
             queryset = Task.objects.all().order_by('-id')
-        elif self.action == 'list_created_tasks' or self.action == 'update' or self.action == 'partial_update':
+        elif self.action == 'list_created_tasks' or self.action == 'update' or self.action == 'partial_update' or self.action == 'destroy':
             # task that the user has created
             queryset = user.created_tasks.all().order_by('-id')
         else:
@@ -155,8 +152,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         check_parent_task_as_subtask(instance, serializer)
         check_assigned_users_in_groups(serializer)
         remove_user_and_group_from_subtasks(instance, serializer)
-
-        self.perform_update(serializer)
+        self.perform_update(serializer, instance)
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
@@ -169,7 +165,54 @@ class TaskViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        updated_istance = serializer.save(owner=self.request.user)
+        create_task_added_notification(updated_istance)
+
+    def perform_update(self, serializer, instance):
+        old_group_list = list(instance.groups.all())
+        old_user_list = list(instance.users.all())
+        old_status = instance.status
+        old_deadline = instance.deadline_date
+        updated_istance = serializer.save()
+        create_group_added_removed_notification(
+            old_group_list, old_user_list, serializer, updated_istance)
+        create_user_added_removed_notification(
+            old_user_list, serializer, updated_istance)
+        create_task_status_updated_notification(updated_istance, old_status)
+        create_task_deadline_updated_notification(
+            updated_istance, old_deadline)
+
+    def perform_destroy(self, serializer):
+        instance = self.get_object()
+        old_group_list = list(instance.groups.all())
+        old_user_list = list(instance.users.all())
+        old_task_id = instance.id
+        old_task_title = instance.title
+        serializer.delete()
+        create_task_deleted_notification(
+            old_group_list, old_user_list, old_task_id, old_task_title, serializer)
+
+
+class UserNotificationAssignmentViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows users to be viewed or edited.
+    """
+    serializer_class = UserNotificationAssignmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        # if user.is_superuser:
+        #     queryset = UserNotificationAssignment.objects.all()
+        # else:
+        # queryset = UserNotificationAssignment.objects.all()
+        queryset = UserNotificationAssignment.objects.filter(user=user)
+        return queryset
+
+    # def list(self, request):
+    #     queryset = self.get_queryset()
+    #     serializer = self.get_serializer(queryset, many=True)
+    #     return Response(serializer.data)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -178,7 +221,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsSuperuserOrReadOnly]
 
 
 class GroupViewSet(viewsets.ModelViewSet):
@@ -187,4 +230,4 @@ class GroupViewSet(viewsets.ModelViewSet):
     """
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsSuperuserOrReadOnly]
