@@ -38,7 +38,7 @@ class UserNotificationAssignmentSerializer(serializers.HyperlinkedModelSerialize
 
     class Meta:
         model = UserNotificationAssignment
-        fields = ['id', 'url', 'user', 'is_readed', 'notification']
+        fields = ['id', 'url', 'user', 'is_read', 'notification']
         # lookup_field = 'id'
 
 

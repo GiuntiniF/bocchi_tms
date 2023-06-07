@@ -31,7 +31,7 @@ class UserNotificationAssignment(models.Model):
         UserNotification, related_name='receiver_list', on_delete=models.CASCADE)
     user = models.ForeignKey(
         User, related_name='notification_list', on_delete=models.CASCADE)
-    is_readed = models.BooleanField(default=False)
+    is_read = models.BooleanField(default=False)
 
     class Meta:
         constraints = [

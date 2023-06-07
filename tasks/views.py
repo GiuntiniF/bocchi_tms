@@ -77,7 +77,22 @@ def remove_user_and_group_from_subtasks(instance, serializer):
 class TaskViewSet(viewsets.ModelViewSet):
     """
     API endpoint that returns the task associated with the user (or all the task if the user is a superuser).
+
+    Tasks may be created by any user that has logged in, and have to be assigned to one or more group of users and one or more users in those groups, the groups and the users will then be notified of a new task assigned to them.
+
+    Task progress is implemented by defining the Task using the composite design pattern for creating <b>subtasks</b>, and the progress percentage of the task is determined by the number of subtask that are completed (if task.status == 'COMPLETED')
+
+    Subtask are defined so that a task cannot be a subtask of himself, and there cannot be cicles.
+
+    To create a subtask, create a task that has the <b>parent_task</b> property set to the url of the parent task
+
+    If the subtask has been assigned to groups or users that were not assigned to the parent task, those groups or users will automatically be assigned to the parent task,and if a group/user is removed from a parent task, it'll be removed from all the subtasks as well
+
+    Only the owner of the task can modify or delete the (or by a superuser), and upon modifying a task, the users assigned to the task will receive notifications generated automatically by the system depending of the type of operation the owner has performed, for example a user may receive a notification telling him that he or one of his entire groups have been removed from the task, or that the deadline date of the task has changed.
+
+    See the notification documentation for more informations.
     """
+
     serializer_class = TaskSerializer
 
     def get_queryset(self):
@@ -204,7 +219,11 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 class UserNotificationAssignmentViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    API endpoint that allows users to be viewed or edited.
+    API endpoint that allows users to see the notifications that were sent to them (or all the notifications if the logged user is a superuser).
+
+    Notifications are automatically generated and sent to users by the system when some action is performed on a task the user (or a group the user is part of) is assigned to.
+
+    You can see the type of notification that can be generated in the UserNotification Model, that contains the content of the notification created, while the UserNotificationAssignment model contains the assignment of the notifications to users and a flag that indicates if the user has read the notification or not, that becomes set to True when the user makes a GET request for the single notification or a list (that change won't be visible during that first request, but if the request is sent again the flag is_read will have is value set to True).The flag will be updated only if the user making the request is the actual user the notification is sent to, so that a superuser making a request won't change the flag for the user that actually has to see the notification (unless of course the superuser is the user the notification is sent to) 
     """
     serializer_class = UserNotificationAssignmentSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -212,15 +231,19 @@ class UserNotificationAssignmentViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_superuser:
-            queryset = UserNotificationAssignment.objects.all()
+            queryset = UserNotificationAssignment.objects.all().order_by('-id')
         else:
-            queryset = UserNotificationAssignment.objects.filter(user=user)
+            queryset = UserNotificationAssignment.objects.filter(
+                user=user).order_by('-id')
         return queryset
+        # 116, 120, 122
 
-    # def list(self, request):
-    #     queryset = self.get_queryset()
-    #     serializer = self.get_serializer(queryset, many=True)
-    #     return Response(serializer.data)
+    def list(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        response = serializer.data
+        queryset.filter(user=request.user).update(is_read=True)
+        return Response(response)
 
 
 class UserViewSet(mixins.UpdateModelMixin,
@@ -230,6 +253,8 @@ class UserViewSet(mixins.UpdateModelMixin,
                   viewsets.GenericViewSet):
     """
     API endpoint that allows users to be viewed or edited.
+
+    Make sure that when you login with a user to insert the token at the top of the page in the authorize overlay as "Token <the_actual_token_from_the_login_request_response>".
     """
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
@@ -239,6 +264,8 @@ class UserViewSet(mixins.UpdateModelMixin,
 class GroupViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows groups to be viewed or edited(only if you are logged as a superuser).
+
+    Groups are meant to be use as a way to categorize user roles, they do not grant different permissions, they are used only as a way to assign task to a certain group of users, so that all those users will receive notifications when a task is assigned to one of the groups they are part of, and as a way to make sure the users that get assigned to a task are users that can actually perform a task (for example it wouldn't make sense for a user that is only part of the 'Backend Developers' group to be assigned to a task meant for the users in the 'Frontend Developers' ). 
     """
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
