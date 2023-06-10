@@ -7,7 +7,7 @@ from .models import Task, UserNotificationAssignment
 from .notifications import create_task_added_notification, create_group_added_removed_notification, create_user_added_removed_notification, create_task_deleted_notification, create_task_status_updated_notification, create_task_deadline_updated_notification
 from .exceptions import UserNotInGroupException, TaskAssignedToHisSubtaskException
 from .permissions import IsSuperuserOrReadOnly, IsOwnerOrSuperuserOrReadOnly, AssignedUserOrOwnerOsSuperuserCanView
-from .serializers import TaskReadSerializer, TaskWriteSerializer, UserSerializer, GroupSerializer, UserNotificationAssignmentSerializer
+from .serializers import TaskReadSerializer, TaskWriteSerializer, UserSerializer, GroupReadSerializer, GroupWriteSerializer, UserNotificationAssignmentSerializer
 
 
 def check_parent_task_as_subtask(instance, serializer):
@@ -181,7 +181,9 @@ class TaskViewSet(viewsets.ModelViewSet):
         check_parent_task_as_subtask(instance, serializer)
         check_assigned_users_in_groups(serializer)
         remove_user_and_group_from_subtasks(instance, serializer)
-        self.perform_update(serializer, instance)
+        updated_istance = self.perform_update(serializer, instance)
+        response_serializer = TaskReadSerializer(
+            updated_istance, context={'request': request})
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
@@ -213,6 +215,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         create_task_status_updated_notification(updated_istance, old_status)
         create_task_deadline_updated_notification(
             updated_istance, old_deadline)
+        return updated_istance
 
     def perform_destroy(self, serializer):
         instance = self.get_object()
@@ -276,5 +279,36 @@ class GroupViewSet(viewsets.ModelViewSet):
     Groups are meant to be use as a way to categorize user roles, they do not grant different permissions, they are used only as a way to assign task to a certain group of users, so that all those users will receive notifications when a task is assigned to one of the groups they are part of, and as a way to make sure the users that get assigned to a task are users that can actually perform a task (for example it wouldn't make sense for a user that is only part of the 'Backend Developers' group to be assigned to a task meant for the users in the 'Frontend Developers' ). 
     """
     queryset = Group.objects.all()
-    serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticated, IsSuperuserOrReadOnly]
+
+    def get_serializer_class(self):
+        if (self.action == 'list') | (self.action == 'retrieve'):
+            return GroupReadSerializer
+        return GroupWriteSerializer
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        updated_istance = self.perform_update(serializer, instance)
+        response_serializer = GroupReadSerializer(
+            updated_istance, context={'request': request})
+        return Response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(
+            data=request.data, partial=False)
+        serializer.is_valid(raise_exception=True)
+        updated_istance = self.perform_create(serializer)
+        response_serializer = GroupReadSerializer(
+            updated_istance, context={'request': request})
+        return Response(response_serializer.data)
+
+    def perform_create(self, serializer):
+        updated_istance = serializer.save(owner=self.request.user)
+        return updated_istance
+
+    def perform_update(self, serializer, instance):
+        updated_istance = serializer.save()
+        return updated_istance

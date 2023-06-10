@@ -63,7 +63,13 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
                   'email', 'groups', 'created_tasks', 'notification_list']
 
 
-class GroupSerializer(serializers.HyperlinkedModelSerializer):
+class GroupWriteSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Group
+        fields = ['name']
+
+
+class GroupReadSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Group
         fields = ['id', 'url', 'name', 'user_set']
