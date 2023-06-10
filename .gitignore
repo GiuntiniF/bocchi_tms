@@ -2,7 +2,7 @@
 __pycache__
 db.sqlite3
 /env
+*.env.dev
 *.env
-*.env.prod
 .vscode
 data/

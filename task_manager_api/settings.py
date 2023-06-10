@@ -23,7 +23,7 @@ env = environ.Env(
     SECRET_KEY=(str)
 )
 # reading .env file
-environ.Env.read_env(os.path.join(BASE_DIR, '.env.prod'))
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 
 # False if not in os.environ
