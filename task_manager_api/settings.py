@@ -46,7 +46,8 @@ ALLOWED_HOSTS = [
 
 CSRF_TRUSTED_ORIGINS = [
     "https://web-production-acf4.up.railway.app",
-    "http://web-production-acf4.up.railway.app"
+    "http://web-production-acf4.up.railway.app",
+    "https://djangorailway-production.up.railway.app"
 ]
 
 
