@@ -7,7 +7,7 @@ from .models import Task, UserNotificationAssignment
 from .notifications import create_task_added_notification, create_group_added_removed_notification, create_user_added_removed_notification, create_task_deleted_notification, create_task_status_updated_notification, create_task_deadline_updated_notification
 from .exceptions import UserNotInGroupException, TaskAssignedToHisSubtaskException
 from .permissions import IsSuperuserOrReadOnly, IsOwnerOrSuperuserOrReadOnly, AssignedUserOrOwnerOsSuperuserCanView
-from .serializers import TaskSerializer, UserSerializer, GroupSerializer, UserNotificationAssignmentSerializer
+from .serializers import TaskReadSerializer, TaskWriteSerializer, UserSerializer, GroupSerializer, UserNotificationAssignmentSerializer
 
 
 def check_parent_task_as_subtask(instance, serializer):
@@ -93,7 +93,12 @@ class TaskViewSet(viewsets.ModelViewSet):
     See the notification documentation for more informations.
     """
 
-    serializer_class = TaskSerializer
+    # serializer_class = TaskReadSerializer
+
+    def get_serializer_class(self):
+        if (self.action == 'list') | (self.action == 'list_created_tasks') | (self.action == 'list_assigned_tasks') | (self.action == 'retrieve'):
+            return TaskReadSerializer
+        return TaskWriteSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -156,7 +161,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         queryset = Task.objects.all()
         task = get_object_or_404(queryset, pk=pk)
         self.check_object_permissions(request, obj=task)
-        serializer = TaskSerializer(task, context={'request': request})
+        serializer = TaskReadSerializer(task, context={'request': request})
         return Response(serializer.data)
 
     def update(self, request, *args, **kwargs):
@@ -185,12 +190,15 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         check_assigned_users_in_groups(serializer)
         set_parent_tasks_users(serializer)
-        self.perform_create(serializer)
-        return Response(serializer.data)
+        updated_istance = self.perform_create(serializer)
+        response_serializer = TaskReadSerializer(
+            updated_istance, context={'request': request})
+        return Response(response_serializer.data)
 
     def perform_create(self, serializer):
         updated_istance = serializer.save(owner=self.request.user)
         create_task_added_notification(updated_istance)
+        return updated_istance
 
     def perform_update(self, serializer, instance):
         old_group_list = list(instance.groups.all())

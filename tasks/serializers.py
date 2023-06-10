@@ -3,7 +3,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User, Group
 
 
-class TaskSerializer(serializers.HyperlinkedModelSerializer):
+class TaskReadSerializer(serializers.HyperlinkedModelSerializer):
     owner = serializers.PrimaryKeyRelatedField(
         source='owner.id', read_only=True)
     users = serializers.PrimaryKeyRelatedField(
@@ -15,7 +15,7 @@ class TaskSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Task
         fields = ['id', 'url', 'title', 'description', 'owner', 'status', 'progress',
-                  'created_at', 'updated_at', 'deadline_date', 'parent_task', 'users', 'groups']
+                  'created_at', 'updated_at', 'deadline_date', 'parent_task', 'subtasks', 'users', 'groups']
 
     def get_progress(self, obj):
         if obj.status == 'COMPLETED':
@@ -25,6 +25,20 @@ class TaskSerializer(serializers.HyperlinkedModelSerializer):
             return str(int(completed_subtasks.count() / obj.subtasks.count() * 100)) + '%'
         else:
             return '0%'
+
+
+class TaskWriteSerializer(serializers.HyperlinkedModelSerializer):
+    # owner = serializers.PrimaryKeyRelatedField(
+    #     source='owner.id', read_only=True)
+    users = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=User.objects.all())
+    groups = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Group.objects.all())
+
+    class Meta:
+        model = Task
+        fields = ['title', 'description', 'status',
+                  'deadline_date', 'parent_task', 'users', 'groups']
 
 
 class UserNotificationSerializer(serializers.HyperlinkedModelSerializer):
