@@ -41,12 +41,12 @@ DEBUG = env('DEBUG')
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    "web-production-acf4.up.railway.app",
+    "bocchi-tms.up.railway.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://web-production-acf4.up.railway.app",
-    "http://web-production-acf4.up.railway.app",
+    "https://bocchi-tms.up.railway.app",
+    "http://bocchi-tms.up.railway.app",
     "https://djangorailway-production.up.railway.app"
 ]
 
@@ -88,7 +88,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
-ROOT_URLCONF = 'task_manager_api.urls'
+ROOT_URLCONF = 'bocchi_tms.urls'
 
 TEMPLATES = [
     {
@@ -106,7 +106,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'task_manager_api.wsgi.application'
+WSGI_APPLICATION = 'bocchi_tms.wsgi.application'
 
 
 # Database
