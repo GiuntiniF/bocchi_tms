@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status, permissions, mixins
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth.models import User, Group
 from django.shortcuts import get_object_or_404
 from .models import Task, UserNotificationAssignment
@@ -94,7 +95,6 @@ class TaskViewSet(viewsets.ModelViewSet):
     """
 
     # serializer_class = TaskReadSerializer
-
     def get_serializer_class(self):
         if (self.action == 'list') | (self.action == 'list_created_tasks') | (self.action == 'list_assigned_tasks') | (self.action == 'retrieve'):
             return TaskReadSerializer
@@ -184,7 +184,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         updated_istance = self.perform_update(serializer, instance)
         response_serializer = TaskReadSerializer(
             updated_istance, context={'request': request})
-        return Response(serializer.data)
+        return Response(response_serializer.data)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(
@@ -247,7 +247,6 @@ class UserNotificationAssignmentViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = UserNotificationAssignment.objects.filter(
                 user=user).order_by('-id')
         return queryset
-        # 116, 120, 122
 
     def list(self, request):
         queryset = self.filter_queryset(self.get_queryset())

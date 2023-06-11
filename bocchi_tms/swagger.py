@@ -20,7 +20,8 @@ schema_view = get_schema_view(
         contact=openapi.Contact(email="contact@example.com"),
         license=openapi.License(name="BSD License"),
     ),
-    url=env("API_URL"),
+    # url=env("API_URL"),
+    url='http://127.0.0.1:8000/',
     public=True,
     permission_classes=(permissions.AllowAny,))
 

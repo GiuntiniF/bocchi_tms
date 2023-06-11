@@ -1,1 +1,1 @@
-web: python manage.py makemigrations && python manage.py migrate && python manage.py collectstatic --noinput && gunicorn bocchi_tms.wsgi --log-file -
+web: python manage.py makemigrations && python manage.py migrate && python manage.py makemigrations tasks && python manage.py migrate tasks && python manage.py collectstatic --noinput && gunicorn bocchi_tms.wsgi --log-file -
