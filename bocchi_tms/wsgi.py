@@ -1,5 +1,5 @@
 """
-WSGI config for task_manager_api project.
+WSGI config for bocchi_tms project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

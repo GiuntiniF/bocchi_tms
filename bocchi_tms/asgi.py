@@ -1,5 +1,5 @@
 """
-ASGI config for task_manager_api project.
+ASGI config for bocchi_tms project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
